@@ -1,0 +1,1568 @@
+/* 1- BIBLIOTECAS */
+#include <stdio.h>   // FORNECE INPUTS/OUTPUTS
+#include <stdlib.h>  // ALOCAÇÃO DE MEMÓRIA
+#include <string.h>  // COONCATENAÇÃO E COPIA DE STRINGS
+#include <conio.h>   // CRIAR A TELA E MANIPULAR CARACTERES
+#include <windows.h> // FUNCIONALIDADES DO WINDOWS
+#include <locale.h>  // IDIOMA DE ACORDO COM A LOCALIZAÇÃO DO SISTEMA OPERACIONAL
+
+/* 1.1- VARIÁVEIS GLOBAIS */
+#define ENTER 13
+#define TAB 9
+#define BCKSPC 8
+char UsrName[50] = "username";
+
+/* 2- ESTRUTURAS */
+struct cadastro
+{
+    FILE *UserRegistration;
+    FILE *UserInfo;
+    char Nome[100];
+    char Cpf[100];
+    int Phone;
+    char Email[50];
+    char Senha[50];
+    char ConfirmacaoSenha[50];
+    char UserName[50];
+    int TipoPerfil;
+    char Continuar[3];
+} Cadastro;
+
+struct Search
+{
+    char Nome[100];
+};
+
+struct Produto
+{
+    FILE *CreateProduct;
+    char nome[100];
+    char marca[100];
+    float preco;
+    char idProduto[30];
+    char data[10];
+    int quantidade;
+    char continuar[3];
+} produto;
+
+struct Financeiro
+{
+    FILE *Fechamento;
+    char mes[15];
+    float total;
+} financeiro;
+
+struct Lista
+{
+    FILE *ListarUsuarios;
+    FILE *ListarProdutos;
+    FILE *ListarFechamento;
+} lista;
+
+/* 3- FUNÇÕES */
+
+/* 3.1- FUNÇÃO PARA RECEBER STRING */
+void TakeInput(char ch[50])
+{
+    fgets(ch, 50, stdin);
+    ch[strlen(ch) - 1] = 0;
+}
+
+/* 3.2- FUNÇÃO PARA MASCARAR SENHA */
+void TakePassword(char pwd[50])
+{
+    fflush(stdin);
+
+    int i = 0;
+    char ch;
+    while (1)
+    {
+        ch = getch();
+        if (ch == ENTER || ch == TAB)
+        {
+            pwd[i] = '\0';
+            break;
+        }
+        else if (ch == BCKSPC)
+        {
+            if (i > 0)
+            {
+                i--;
+                printf("\b \b");
+            }
+        }
+        else
+        {
+            pwd[i++] = ch;
+            printf("* \b");
+        }
+    }
+}
+
+/* 3.3- FUNÇÃO PARA BUSCAR REGISTROS NO ARQUIVO DE LOGIN */
+int BuscarNoArquivoLogin(char *fname, char *str)
+{
+    FILE *fp;
+    int NumeroLinha = 1;
+    int LinhaEncontrada = 0;
+    int LinhaLimite = 0;
+    int Resultado = 0;
+    char temp[512];
+
+    if ((fopen_s(&fp, fname, "r")) != NULL)
+    {
+    }
+
+    while (fgets(temp, 512, fp) != NULL)
+    {
+        if ((strstr(temp, str)) != NULL)
+        {
+            if (LinhaEncontrada == 0)
+            {
+                LinhaEncontrada = NumeroLinha;
+                LinhaLimite = LinhaEncontrada + 2;
+                Resultado++;
+            }
+        }
+
+        if (LinhaLimite == NumeroLinha)
+        {
+            if (LinhaLimite < LinhaEncontrada + 8)
+            {
+                LinhaLimite = LinhaLimite + 2;
+            }
+        }
+
+        NumeroLinha++;
+    }
+
+    if (Resultado == 0)
+    {
+    }
+    else
+    {
+        if (fp)
+        {
+            fclose(fp);
+        }
+
+        return 1;
+    }
+
+    if (fp)
+    {
+        fclose(fp);
+    }
+
+    return (0);
+}
+
+/* 3.4- FUNÇÃO PARA BUSCAR SUBSTITUIR PALAVRAS */
+char *replaceWord(const char *s, const char *oldW, const char *newW)
+{
+    char *result;
+    int i, cnt = 0;
+    int newWlen = strlen(newW);
+    int oldWlen = strlen(oldW);
+
+    // CONTAGEM DE STRINGS DA PALAVRA ANTIGA
+    for (i = 0; s[i] != '\0'; i++)
+    {
+        if (strstr(&s[i], oldW) == &s[i])
+        {
+            cnt++;
+
+            i += oldWlen - 1;
+        }
+    }
+
+    // CRIANDO UMA STRING COM TAMANHO SUFICIENTE
+    result = (char *)malloc(i + cnt * (newWlen - oldWlen) + 1);
+
+    i = 0;
+    while (*s)
+    {
+        // COMPARANDO A SUBSTRING COM O RESULTADO
+        if (strstr(s, oldW) == s)
+        {
+            strcpy(&result[i], newW);
+            i += newWlen;
+            s += oldWlen;
+        }
+        else
+            result[i++] = *s++;
+    }
+
+    result[i] = '\0';
+    return result;
+}
+
+/* 3.5- FUNÇÃO PARA IDENTIFICAR QUAL O INICIO DA PALAVRA */
+int StartsWith(const char *a, const char *b)
+{
+    if (strncmp(a, b, strlen(b)) == 0)
+        return 1;
+    return 0;
+}
+
+/* 3.6- FUNÇÃO PARA TRANSFORMAR CHAR EM INT */
+int atoi(const char *str)
+{
+    int num = 0;
+    int i = 0;
+    int isNegetive = 0;
+    if (str[i] == '-')
+    {
+        isNegetive = 1;
+        i++;
+    }
+    while (str[i] && (str[i] >= '0' && str[i] <= '9'))
+    {
+        num = num * 10 + (str[i] - '0');
+        i++;
+    }
+    if (isNegetive == 1)
+        num = -1 * num;
+    return num;
+}
+
+/* 3.7- FUNÇÃO PARA BUSCAR REGISTROS NO ARQUIVO DE USUÁRIO */
+int BuscarNoArquivoUserInfo(char *fname, char *str)
+{
+    FILE *fp;
+    int NumeroLinha = 1;
+    int LinhaEncontrada = 0;
+    int LinhaLimite = 0;
+    int Resultado = 0;
+    char temp[512];
+
+    char *Username = NULL;
+    char *Name = NULL;
+    char *Email = NULL;
+    char *CPF = NULL;
+    char *Telefone = NULL;
+    char *TipoDePerfil = NULL;
+
+    if ((fopen_s(&fp, fname, "r")) != NULL)
+    {
+    }
+
+    while (fgets(temp, 512, fp) != NULL)
+    {
+        if ((strstr(temp, str)) != NULL)
+        {
+            if (LinhaEncontrada == 0)
+            {
+                LinhaEncontrada = NumeroLinha;
+                LinhaLimite = LinhaEncontrada + 2;
+                Resultado++;
+
+                Username = replaceWord(temp, "Usuário - ", "");
+            }
+        }
+
+        if (LinhaLimite == NumeroLinha)
+        {
+            if (LinhaLimite < LinhaEncontrada + 12)
+            {
+                int isTipoDePerfil = StartsWith(temp, "Tipo Perfil - ");
+
+                if (isTipoDePerfil == 1)
+                {
+                    TipoDePerfil = replaceWord(temp, "Tipo Perfil - ", "");
+                }
+
+                LinhaLimite = LinhaLimite + 2;
+            }
+        }
+
+        NumeroLinha++;
+    }
+
+    if (Resultado == 0)
+    {
+    }
+    else
+    {
+        int TipoPerfilInt = atoi(TipoDePerfil);
+        printf("%d", TipoPerfilInt);
+
+        if (fp)
+        {
+            fclose(fp);
+        }
+
+        return (TipoPerfilInt);
+    }
+
+    if (fp)
+    {
+        fclose(fp);
+    }
+
+    return (0);
+}
+
+/* 3.8- FUNÇÃO PARA BUSCAR NOME NO ARQUIVO DE PRODUTO */
+float BuscarNoArquivoProduto(char *fname, char *str)
+{
+    FILE *fp;
+    int NumeroLinha = 1;
+    int LinhaEncontrada = 0;
+    int LinhaLimite = 0;
+    int Resultado = 0;
+    char temp[512];
+    char *ValorSDefault = NULL;
+
+    if ((fopen_s(&fp, fname, "r")) != NULL)
+    {
+    }
+
+    while (fgets(temp, 512, fp) != NULL)
+    {
+        if ((strstr(temp, str)) != NULL)
+        {
+            if (LinhaEncontrada == 0)
+            {
+                LinhaEncontrada = NumeroLinha;
+                LinhaLimite = LinhaEncontrada + 2;
+                Resultado++;
+            }
+        }
+
+        if (LinhaLimite == NumeroLinha)
+        {
+            if (LinhaLimite < LinhaEncontrada + 12)
+            {
+                LinhaLimite = LinhaLimite + 2;
+
+                int isValor = StartsWith(temp, "Preço - R$ ");
+
+                if (isValor == 1)
+                {
+                    ValorSDefault = replaceWord(temp, "Preço - R$ ", "");
+                }
+            }
+        }
+
+        NumeroLinha++;
+    }
+
+    if (Resultado != 0)
+    {
+        if (fp)
+        {
+            fclose(fp);
+        }
+
+        float ftemp = atof(ValorSDefault);
+
+        return ftemp;
+    }
+
+    if (fp)
+    {
+        fclose(fp);
+    }
+
+    return (0);
+}
+
+/* 3.9- FUNÇÃO PARA BUSCAR LINHA NO ARQUIVO DE PRODUTO */
+int BuscarLinhaNoArquivoProduto(char *fname, char *str)
+{
+    FILE *fp;
+    int NumeroLinha = 1;
+    int LinhaFinal = 0;
+    int LinhaEncontrada = 0;
+    int LinhaLimite = 0;
+    int Resultado = 0;
+    char temp[512];
+    char *ValorSDefault = NULL;
+
+    if ((fopen_s(&fp, fname, "r")) != NULL)
+    {
+    }
+
+    while (fgets(temp, 512, fp) != NULL)
+    {
+        if ((strstr(temp, str)) != NULL)
+        {
+            if (LinhaEncontrada == 0)
+            {
+                LinhaEncontrada = NumeroLinha;
+                LinhaLimite = LinhaEncontrada + 2;
+                Resultado++;
+            }
+        }
+
+        if (LinhaLimite == NumeroLinha)
+        {
+            if (LinhaLimite < LinhaEncontrada + 12)
+            {
+                LinhaLimite = LinhaLimite + 2;
+
+                int isValor = StartsWith(temp, "Preço - R$ ");
+
+                if (isValor == 1)
+                {
+                    ValorSDefault = replaceWord(temp, "Preço - R$ ", "");
+                    LinhaFinal = NumeroLinha;
+                }
+            }
+        }
+
+        NumeroLinha++;
+    }
+
+    if (Resultado != 0)
+    {
+        if (fp)
+        {
+            fclose(fp);
+        }
+
+        return LinhaFinal;
+    }
+
+    if (fp)
+    {
+        fclose(fp);
+    }
+
+    return (0);
+}
+
+/* 3.1.0- FUNÇÃO PARA EDITAR O ARQUIVO DE PRODUTO */
+int EditarProductsFile(char *newln, int lno)
+{
+    FILE *fptr1, *fptr2;
+    int linectr = 0;
+    char str[256], fname[256] = "Products.txt";
+    char temp[] = "temp.txt";
+
+    // FILE ANTERIOR
+    fptr1 = fopen(fname, "r");
+    if (!fptr1)
+    {
+        printf("Não foi possível abrir o arquivo, tente novamente!\n");
+        return 0;
+    }
+
+    // FILE TEMPORÁRIO
+    fptr2 = fopen(temp, "w");
+    if (!fptr2)
+    {
+        printf("Não foi possível concluir a edição, tente novamente!\n");
+        fclose(fptr1);
+        return 0;
+    }
+
+    // COPIA TODO O CONTEÚDO PARA O ARQUIVO TEMPORÁRIO, MENOS AS LINHAS ESPECÍFICAS
+    while (!feof(fptr1))
+    {
+        strcpy(str, "\0");
+        fgets(str, 256, fptr1);
+        if (!feof(fptr1))
+        {
+            linectr++;
+            if (linectr != lno)
+            {
+                fprintf(fptr2, "%s", str);
+            }
+            else
+            {
+                fprintf(fptr2, "%s", newln);
+            }
+        }
+    }
+
+    fclose(fptr1);
+    fclose(fptr2);
+    remove(fname);
+    rename(temp, fname);
+    return 1;
+}
+
+/* 4- FUNÇÕES/TELAS */
+
+/* 4.1- FUNÇÃO/TELA DE LOGIN */
+void Login()
+{
+    fflush(stdin);
+    system("cls");
+    char SenhaAcesso[50];
+    int usrFound = 0;
+    int usrFoundinFile = 0;
+    char buffer[100];
+    Cadastro.UserRegistration = fopen("Users.txt", "r");
+
+    printf("\nDigite seu Usuário.\t");
+    TakeInput(UsrName);
+    printf("\nDigite sua senha.\t");
+    TakePassword(SenhaAcesso);
+
+    strcat(strcpy(buffer, UsrName), " ");
+    strcat(buffer, SenhaAcesso);
+
+    usrFoundinFile = BuscarNoArquivoLogin("Users.txt", buffer);
+
+    if (usrFoundinFile == 1)
+    {
+        int TipoPerfilB = BuscarNoArquivoUserInfo("UserInfo.txt", UsrName);
+
+        switch (TipoPerfilB)
+        {
+        case 1:
+            fclose(Cadastro.UserRegistration);
+            fclose(Cadastro.UserInfo);
+            MenuAdm();
+            break;
+
+        case 2:
+            fclose(Cadastro.UserRegistration);
+            fclose(Cadastro.UserInfo);
+            MenuFuncionario();
+            break;
+
+        case 3:
+            fclose(Cadastro.UserRegistration);
+            fclose(Cadastro.UserInfo);
+            MenuCliente();
+            break;
+
+        case 4:
+            fclose(Cadastro.UserRegistration);
+            fclose(Cadastro.UserInfo);
+            MenuFinanceiro();
+            break;
+
+        default:
+            fclose(Cadastro.UserRegistration);
+            fclose(Cadastro.UserInfo);
+            printf("\n\t\tALGO DEU ERRADO, POR FAVOR TENTE NOVAMENTE! CASO O ERRO PERSISTA, CONTATE O ADMINISTRADOR!");
+            system("pause");
+            Login();
+            break;
+        }
+    }
+    else
+    {
+        printf("\nLOGIN E/OU SENHA INCORRETO, POR FAVOR TENTE NOVAMENTE!\t");
+        printf("\n");
+        system("pause");
+        system("cls");
+        Login();
+    }
+    fclose(Cadastro.UserRegistration);
+    fclose(Cadastro.UserInfo);
+}
+
+/* 4.2- FUNÇÃO/TELA PARA CADASTRAR USUÁRIO */
+void cadastrar()
+{
+    system("cls");
+    fflush(stdin);
+
+    setlocale(LC_ALL, "Portuguese");
+    int usrFoundinFile = 0;
+    int sucesso = 0;
+    // char Erro[50];
+    char Erro[4] = "";
+    Cadastro.UserInfo = fopen("UserInfo.txt", "a");
+
+    system("cls");
+    printf("\n\n-------------------------CADASTRAR USUÁRIO-------------------------\n\n");
+    printf("Crie um nome para login:\t");
+    gets(Cadastro.UserName);
+    fprintf(Cadastro.UserInfo, "Usuário - %s \n\n", Cadastro.UserName);
+    printf("Nome completo do usuário:\t");
+    gets(Cadastro.Nome);
+    fprintf(Cadastro.UserInfo, "Nome - %s \n\n", Cadastro.Nome);
+    printf("E-mail do usuário:\t");
+    gets(Cadastro.Email);
+    fprintf(Cadastro.UserInfo, "E-mail - %s \n\n", Cadastro.Email);
+    printf("CPF:\t");
+    gets(Cadastro.Cpf);
+    fprintf(Cadastro.UserInfo, "CPF - %s \n\n", Cadastro.Cpf);
+    printf("Telefone:\t");
+    scanf("%d", &Cadastro.Phone);
+    fprintf(Cadastro.UserInfo, "Telefone - %d \n\n", Cadastro.Phone);
+    printf("Tipo de Perfil:\t");
+    printf("\n1-adm, 2-funcionario, 3- cliente, 4-Financeiro\n");
+    scanf("%d", &Cadastro.TipoPerfil);
+    fprintf(Cadastro.UserInfo, "Tipo Perfil - %d \n\n", Cadastro.TipoPerfil);
+    fflush(stdin);
+    fprintf(Cadastro.UserInfo, "-------------------------------------------- \n\n");
+    printf("Crie uma senha:\t");
+    TakePassword(Cadastro.Senha);
+    printf("\nConfirme a senha:\t");
+    TakePassword(Cadastro.ConfirmacaoSenha);
+
+    if (!strcmp(Cadastro.Senha, Cadastro.ConfirmacaoSenha))
+    {
+        sucesso = 1;
+        Cadastro.UserRegistration = fopen("Users.txt", "a");
+        fprintf(Cadastro.UserRegistration, "%s %s \n", Cadastro.UserName, Cadastro.Senha);
+
+        if (sucesso != 0)
+        {
+            fflush(stdin);
+            system("cls");
+            printf("\nCadastro realizado com sucesso!\nSEU NOME DE USUÁRIO É: %s\n", Cadastro.UserName);
+
+            printf("\n");
+            system("pause");
+        }
+        else
+        {
+            fclose(Cadastro.UserRegistration);
+            fclose(Cadastro.UserInfo);
+            printf("\nAlgo deu errado, tente novamente!");
+            printf("\n");
+            system("pause");
+            cadastrar();
+        }
+    }
+    else
+    {
+        fclose(Cadastro.UserRegistration);
+        fclose(Cadastro.UserInfo);
+        printf("\nAs senhas não conferem, tente novamente!\t");
+        printf("\n");
+        system("pause");
+        cadastrar();
+    }
+
+    fclose(Cadastro.UserRegistration);
+    fclose(Cadastro.UserInfo);
+    system("cls");
+
+    usrFoundinFile = BuscarNoArquivoLogin("Users.txt", UsrName);
+
+    if (usrFoundinFile == 1)
+    {
+        int TipoPerfilB = BuscarNoArquivoUserInfo("UserInfo.txt", UsrName);
+
+        switch (TipoPerfilB)
+        {
+        case 1:
+            MenuAdm();
+            break;
+        case 2:
+            MenuFuncionario();
+            break;
+        }
+    }
+    else
+    {
+        printf("\n\t\tVOCÊ PRECISA REALIZAR AUTENTIÇÃO. POR FAVOR, ENTRE COM SEU LOGIN E SENHA!");
+        printf("\n");
+        system("pause");
+        Login();
+    }
+}
+
+/* 4.3- FUNÇÃO/TELA PARA CADASTRAR PRODUTO */
+void CadastrarProduto()
+{
+    fflush(stdin);
+    system("cls");
+
+    setlocale(LC_ALL, "Portuguese");
+
+    produto.CreateProduct = fopen("Products.txt", "a");
+    float Total = 0;
+
+    do
+    {
+        fflush(stdin);
+        system("cls");
+        printf("\n\n-------------------------CADASTRAR PRODUTO-------------------------\n\n");
+        printf("Nome do produto:\t");
+        gets(produto.nome);
+        fprintf(produto.CreateProduct, "Nome - %s \n\n", produto.nome);
+        printf("Marca:\t");
+        gets(produto.marca);
+        fprintf(produto.CreateProduct, "Marca - %s \n\n", produto.marca);
+        printf("Código do produto:\t");
+        gets(produto.idProduto);
+        fprintf(produto.CreateProduct, "Código - %s \n\n", produto.idProduto);
+        printf("Data de Cadastro (dd/mm/aaaa):\t");
+        gets(produto.data);
+        fprintf(produto.CreateProduct, "Data - %s \n\n", produto.data);
+        printf("Valor do produto:\t");
+        scanf("%f", &produto.preco);
+        fprintf(produto.CreateProduct, "Preço - R$ %.2f \n\n", produto.preco);
+        printf("Quantidade de produtos:\t");
+        scanf("%d", &produto.quantidade);
+        fprintf(produto.CreateProduct, "Quantidade - %d \n\n", produto.quantidade);
+        Total = (produto.preco * produto.quantidade);
+        fprintf(produto.CreateProduct, "Valor total - R$ %.2f \n\n", Total);
+        fprintf(produto.CreateProduct, "-------------------------------------------- \n\n");
+
+        fflush(stdin);
+        printf("Deseja cadastrar outro produto? [s/n]\t");
+        gets(produto.continuar);
+
+    } while (strcmp(produto.continuar, "s") == 0);
+
+    fclose(produto.CreateProduct);
+    system("cls");
+
+    int TipoPerfilB = BuscarNoArquivoUserInfo("UserInfo.txt", UsrName);
+
+    switch (TipoPerfilB)
+    {
+    case 1:
+        MenuAdm();
+        break;
+
+    case 2:
+        MenuFuncionario();
+        break;
+
+    case 3:
+        MenuCliente();
+        break;
+
+    default:
+        printf("\n\t\tALGO DEU ERRADO, POR FAVOR TENTE NOVAMENTE! CASO O ERRO PERSISTA, CONTATE O ADMINISTRADOR!");
+        system("pause");
+        Login();
+        break;
+    }
+}
+
+/* 4.4- FUNÇÃO/TELA PARA LISTAGENS */
+void listar()
+{
+    fflush(stdin);
+    system("cls");
+
+    int TipoPerfilB = BuscarNoArquivoUserInfo("UserInfo.txt", UsrName);
+    int escolhaLAdm = 0;
+    int escolhaLFun = 0;
+
+    switch (TipoPerfilB)
+    {
+    case 1:
+
+        system("cls");
+        printf("Por favor, escolha qual lista deseja ver:\t");
+        printf("\n5-Usuários, 6-Produtos, 7-Financeiro\n");
+        scanf("%d", &escolhaLAdm);
+
+        switch (escolhaLAdm)
+        {
+        case 5:
+            system("cls");
+            lista.ListarUsuarios = fopen("UserInfo.txt", "r");
+
+            if (lista.ListarUsuarios == NULL)
+            {
+                printf("Nenhum Usuário cadastrado!\n");
+                system("pause");
+                system("cls");
+                MenuAdm();
+            };
+
+            char usrr[1000];
+
+            while (fgets(usrr, 1000, lista.ListarUsuarios) != NULL)
+            {
+                printf("%s", usrr);
+            };
+
+            fclose(lista.ListarUsuarios);
+            printf("\n");
+            system("pause");
+            system("cls");
+            MenuAdm();
+            break;
+
+        case 6:
+            system("cls");
+            lista.ListarProdutos = fopen("Products.txt", "r");
+
+            if (lista.ListarProdutos == NULL)
+            {
+                printf("Nenhum Produto cadastrado!\n");
+                system("pause");
+                system("cls");
+                MenuAdm();
+            };
+
+            char products[1000];
+
+            while (fgets(products, 1000, lista.ListarProdutos) != NULL)
+            {
+                printf("%s", products);
+            };
+
+            fclose(lista.ListarProdutos);
+            printf("\n");
+            system("pause");
+            system("cls");
+            MenuAdm();
+            break;
+
+        case 7:
+            system("cls");
+            lista.ListarFechamento = fopen("RelatorioFechamento.txt", "r");
+
+            if (lista.ListarFechamento == NULL)
+            {
+                printf("Nenhum Fechamento realizado!\n");
+                system("pause");
+                system("cls");
+                MenuAdm();
+            };
+
+            char Finance[1000];
+
+            while (fgets(Finance, 1000, lista.ListarFechamento) != NULL)
+            {
+                printf("%s", Finance);
+            };
+
+            fclose(lista.ListarFechamento);
+            printf("\n");
+            system("pause");
+            system("cls");
+            MenuAdm();
+            break;
+
+        default:
+            printf("Escolha uma opção válida!\n");
+            system("pause");
+            system("cls");
+            listar();
+            break;
+        }
+        break;
+    case 2:
+        system("cls");
+        printf("Por favor, escolha qual lista deseja ver:\t");
+        printf("\n8- Usuários, 9- Produtos\n");
+        scanf("%d", &escolhaLFun);
+
+        switch (escolhaLFun)
+        {
+        case 8:
+            system("cls");
+            lista.ListarUsuarios = fopen("UserInfo.txt", "r");
+
+            if (lista.ListarUsuarios == NULL)
+            {
+                printf("Nenhum Usuário cadastrado!\n");
+                system("pause");
+                system("cls");
+                MenuFuncionario();
+            };
+
+            char usrr[1000];
+
+            while (fgets(usrr, 1000, lista.ListarUsuarios) != NULL)
+            {
+                printf("%s", usrr);
+            };
+
+            fclose(lista.ListarUsuarios);
+            printf("\n");
+            system("pause");
+            system("cls");
+            MenuFuncionario();
+            break;
+
+        case 9:
+            system("cls");
+            lista.ListarProdutos = fopen("Products.txt", "r");
+
+            if (lista.ListarProdutos == NULL)
+            {
+                printf("Nenhum Produto cadastrado!\n");
+                system("pause");
+                system("cls");
+                MenuFuncionario();
+            };
+
+            char products[1000];
+
+            while (fgets(products, 1000, lista.ListarProdutos) != NULL)
+            {
+                printf("%s", products);
+            };
+
+            fclose(lista.ListarProdutos);
+            printf("\n");
+            system("pause");
+            system("cls");
+            MenuFuncionario();
+            break;
+
+        default:
+            printf("Escolha uma opção válida!\n");
+            system("pause");
+            system("cls");
+            listar();
+            break;
+        }
+        break;
+
+    case 3:
+        system("cls");
+        lista.ListarProdutos = fopen("Products.txt", "r");
+
+        if (lista.ListarProdutos == NULL)
+        {
+            printf("Nenhum Produto cadastrado!\n");
+            system("pause");
+            system("cls");
+            MenuCliente();
+        };
+
+        char products[1000];
+
+        while (fgets(products, 1000, lista.ListarProdutos) != NULL)
+        {
+            printf("%s", products);
+        };
+
+        fclose(lista.ListarProdutos);
+        printf("\n");
+        system("pause");
+        system("cls");
+        MenuCliente();
+        break;
+
+    case 4:
+        system("cls");
+        lista.ListarProdutos = fopen("Products.txt", "r");
+
+        if (lista.ListarProdutos == NULL)
+        {
+            printf("Nenhum Produto cadastrado!\n");
+            system("pause");
+            system("cls");
+            MenuFinanceiro();
+        };
+
+        char Products[1000];
+
+        while (fgets(Products, 1000, lista.ListarProdutos) != NULL)
+        {
+            printf("%s", Products);
+        };
+
+        fclose(lista.ListarProdutos);
+        printf("\n");
+        system("pause");
+        system("cls");
+        MenuFinanceiro();
+        break;
+
+    default:
+        printf("\n\t\tALGO DEU ERRADO, POR FAVOR TENTE NOVAMENTE! CASO O ERRO PERSISTA, CONTATE O ADMINISTRADOR!");
+        system("pause");
+        fclose(lista.ListarProdutos);
+        Login();
+        break;
+    }
+}
+
+/* 4.5- FUNÇÃO/TELA PARA INFORMAÇÕES DE RELATÓRIOS */
+void Relatorios()
+{
+    fflush(stdin);
+    system("cls");
+
+    int TipoPerfilB = BuscarNoArquivoUserInfo("UserInfo.txt", UsrName);
+    int escolhaR = 0;
+
+    switch (TipoPerfilB)
+    {
+    case 1:
+        system("cls");
+        printf("Por favor, escolha qual Relatório deseja gerar:\t");
+        printf("\n2-Usuários, 5-Produtos, 6-Financeiro\n");
+        scanf("%d", &escolhaR);
+
+        switch (escolhaR)
+        {
+        case 2:
+            system("cls");
+            lista.ListarUsuarios = fopen("UserInfo.txt", "r");
+
+            if (lista.ListarUsuarios == NULL)
+            {
+                printf("No momento ainda não há registros para gerar um relatório.\n");
+                system("pause");
+                system("cls");
+                fclose(lista.ListarUsuarios);
+                MenuAdm();
+            }
+            else
+            {
+                system("cls");
+                printf("Seu relatório foi gerado e já está disponível para visualização.\n");
+                system("pause");
+                system("cls");
+                fclose(lista.ListarUsuarios);
+                MenuAdm();
+            }
+            break;
+
+        case 5:
+            system("cls");
+            lista.ListarProdutos = fopen("Products.txt", "r");
+
+            if (lista.ListarProdutos == NULL)
+            {
+                printf("No momento ainda não há registros para gerar um relatório.\n");
+                system("pause");
+                system("cls");
+                fclose(lista.ListarProdutos);
+                MenuAdm();
+            }
+            else
+            {
+                printf("Seu relatório foi gerado e já está disponível para visualização.\n");
+                system("pause");
+                system("cls");
+                fclose(lista.ListarProdutos);
+                MenuAdm();
+            };
+            break;
+
+        case 6:
+            system("cls");
+            lista.ListarFechamento = fopen("RelatorioFechamento.txt", "r");
+
+            if (lista.ListarFechamento == NULL)
+            {
+                printf("No momento ainda não há registros para gerar um relatório.\n");
+                system("pause");
+                system("cls");
+                fclose(lista.ListarFechamento);
+                MenuAdm();
+            }
+            else
+            {
+                printf("Seu relatório foi gerado e já está disponível para visualização.\n");
+                system("pause");
+                system("cls");
+                fclose(lista.ListarFechamento);
+                MenuAdm();
+            };
+            break;
+
+        default:
+            printf("Escolha uma opção válida!\n");
+            system("pause");
+            system("cls");
+            fclose(lista.ListarProdutos);
+            fclose(lista.ListarUsuarios);
+            Relatorios();
+            break;
+        }
+        break;
+
+    case 3:
+        system("cls");
+        lista.ListarProdutos = fopen("Products.txt", "r");
+
+        if (lista.ListarProdutos == NULL)
+        {
+            printf("No momento ainda não há registros para gerar um relatório.\n");
+            system("pause");
+            system("cls");
+            MenuCliente();
+        }
+        else
+        {
+            printf("Seu relatório foi gerado e já está disponível para visualização.\n");
+            system("pause");
+            system("cls");
+            MenuCliente();
+            fclose(lista.ListarProdutos);
+        }
+        break;
+
+    case 4:
+        system("cls");
+        lista.ListarFechamento = fopen("RelatórioFechamento.txt", "r");
+
+        if (lista.ListarFechamento == NULL)
+        {
+            printf("No momento ainda não há registros para gerar um relatório.\n");
+            system("pause");
+            system("cls");
+            fclose(lista.ListarFechamento);
+            MenuFinanceiro();
+        }
+        else
+        {
+            printf("Seu relatório foi gerado e já está disponível para visualização.\n");
+            system("pause");
+            system("cls");
+            fclose(lista.ListarFechamento);
+            MenuFinanceiro();
+        }
+        break;
+
+    default:
+        printf("\n\t\tALGO DEU ERRADO, POR FAVOR TENTE NOVAMENTE! CASO O ERRO PERSISTA, CONTATE O ADMINISTRADOR!");
+        system("pause");
+        Login();
+        break;
+    }
+}
+
+/* 4.6- FUNÇÃO/TELA PARA GERAR RELATÓRIO DE FECHAMENTO */
+void RelatorioFechamento()
+{
+    system("cls");
+    setlocale(LC_ALL, "Portuguese");
+    fflush(stdin);
+
+    financeiro.Fechamento = fopen("RelatorioFechamento.txt", "a");
+    system("cls");
+
+    printf("\n\n-------------------------GERAR RELATÓRIO-------------------------\n\n");
+    printf("Digite o mês de referência:\t");
+    gets(financeiro.mes);
+    fprintf(financeiro.Fechamento, "Mês - %s \n\n", financeiro.mes);
+    printf("Digite o total bruto de entrada:\t");
+    scanf("%f", &financeiro.total);
+    fprintf(financeiro.Fechamento, "Valor total - %.2f \n\n", financeiro.total);
+    fprintf(financeiro.Fechamento, "-------------------------------------------- \n\n");
+
+    fclose(financeiro.Fechamento);
+    system("pause");
+    MenuFinanceiro();
+}
+
+/* 4.7- FUNÇÃO/TELA PARA EDITAR PRODUTOS */
+void EditarProduto()
+{
+    char NomeProduto[100];
+    int NovaQuantidade;
+    float NovoTotal;
+    float Valor;
+    char str[256], fname[256] = "Products.txt";
+    char newln[256] = "Quantidade - ", temp[] = "temp.txt", newlnTotal[256] = "Valor total - R$ ";
+
+    system("cls");
+    setlocale(LC_ALL, "Portuguese");
+    fflush(stdin);
+
+    system("cls");
+
+    printf("\n\n-------------------------EDITAR PRODUTO-------------------------\n\n");
+    printf("Digite o nome do produto que deseja adicionar quantidade ou retirar:\t");
+    gets(NomeProduto);
+
+    Valor = BuscarNoArquivoProduto(fname, NomeProduto);
+
+    if (Valor != 0)
+    {
+        printf("Digite a nova quantidade:\t");
+        scanf("%d", &NovaQuantidade);
+
+        char strNovaQtd[256];
+        char strNovoTotal[256];
+
+        NovoTotal = (NovaQuantidade * Valor);
+
+        itoa(NovaQuantidade, strNovaQtd, 10);
+        strcat(newln, strNovaQtd);
+        strcat(newln, "\n");
+
+        gcvt(NovoTotal, 5, strNovoTotal);
+        strcat(newlnTotal, strNovoTotal);
+        strcat(newlnTotal, "\n");
+
+        int LinhaDoValor = BuscarLinhaNoArquivoProduto(fname, NomeProduto);
+
+        if (LinhaDoValor != 0)
+        {
+            int EditouQuantidade = EditarProductsFile(newln, LinhaDoValor + 2);
+
+            if (EditouQuantidade != 0)
+            {
+                int EditouValorTotal = EditarProductsFile(newlnTotal, LinhaDoValor + 4);
+
+                if (EditouValorTotal != 0)
+                {
+                    printf("\nProduto alterado com sucesso!\t");
+                }
+            }
+        }
+    }
+    else
+    {
+        printf("Produto não encontrado\t");
+        printf("\n");
+        system("pause");
+        EditarProduto();
+    }
+
+    printf("\n");
+    system("pause");
+
+    int TipoPerfilB = BuscarNoArquivoUserInfo("UserInfo.txt", UsrName);
+
+    switch (TipoPerfilB)
+    {
+    case 1:
+        MenuAdm();
+        break;
+    case 2:
+        MenuFuncionario();
+        break;
+    case 3:
+        MenuCliente();
+        break;
+    default:
+        printf("\n\t\tALGO DEU ERRADO, POR FAVOR TENTE NOVAMENTE! CASO O ERRO PERSISTA, CONTATE O ADMINISTRADOR!");
+        system("pause");
+        Login();
+        break;
+    }
+}
+
+/* 4.8- FUNÇÃO/TELA MENU DO ADMINISTRADOR */
+void MenuAdm()
+{
+    system("color 0b");
+    system("cls");
+    int OpcaoMenu;
+
+    setlocale(LC_ALL, "Portuguese");
+
+    printf("\n\t\tBem vindo, %s", UsrName);
+    printf("\n\n");
+
+    printf("\n   ----------------------MENU PRINCIPAL-----------------------");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                  1-Cadastrar Usuário                    |");
+    printf("\n   |                  2-Cadastrar Produto                    |");
+    printf("\n   |                  3-Editar Produto                       |");
+    printf("\n   |                  4-Listas                               |");
+    printf("\n   |                  5-Relatórios                           |");
+    printf("\n   |                  0-Sair                                 |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   ------------------------ESTOQUE X--------------------------");
+    printf("\n\n\n Por favor, digite sua opção:\t");
+    scanf("%d", &OpcaoMenu);
+
+    switch (OpcaoMenu)
+    {
+    case 1:
+        cadastrar();
+        break;
+    case 2:
+        CadastrarProduto();
+        break;
+    case 3:
+        EditarProduto();
+        break;
+    case 4:
+        listar();
+        break;
+    case 5:
+        Relatorios();
+        break;
+    case 0:
+        system("cls");
+        printf("\n\t\t\t\t\tAté mais! :)\n");
+        system("pause");
+        main();
+        break;
+    default:
+        printf("\nOpção inválida!");
+        printf("\n");
+        system("pause");
+        MenuAdm();
+    };
+}
+
+/* 4.9- FUNÇÃO/TELA MENU DO FUNCIONÁRIO */
+void MenuFuncionario()
+{
+    system("color 0b");
+    system("cls");
+    int OpcaoMenu;
+
+    setlocale(LC_ALL, "Portuguese");
+
+    printf("\n\t\tBem vindo, %s", UsrName);
+    printf("\n\n");
+
+    printf("\n   ----------------------MENU PRINCIPAL-----------------------");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                  1-Cadastrar Usuário                    |");
+    printf("\n   |                  2-Cadastrar Produto                    |");
+    printf("\n   |                  3-Editar Produto                       |");
+    printf("\n   |                  4-Listas                               |");
+    printf("\n   |                  0-Sair                                 |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   ------------------------ESTOQUE X--------------------------");
+    printf("\n\n\n Por favor, digite sua opção:\t");
+    scanf("%d", &OpcaoMenu);
+
+    switch (OpcaoMenu)
+    {
+    case 1:
+        cadastrar();
+        break;
+    case 2:
+        CadastrarProduto();
+        break;
+    case 3:
+        EditarProduto();
+        break;
+    case 4:
+        listar();
+        break;
+    case 0:
+        system("cls");
+        printf("\n\t\t\t\t\tAté mais! :)\n");
+        system("pause");
+        main();
+        break;
+    default:
+        printf("\nOpção inválida!");
+        printf("\n");
+        system("pause");
+        MenuFuncionario();
+    };
+}
+
+/* 4.1.0- FUNÇÃO/TELA MENU DO CLIENTE */
+void MenuCliente()
+{
+    system("color 0b");
+    system("cls");
+    int OpcaoMenu;
+
+    setlocale(LC_ALL, "Portuguese");
+
+    printf("\n\t\tBem vindo, %s", UsrName);
+    printf("\n\n");
+
+    printf("\n   ----------------------MENU PRINCIPAL-----------------------");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                  1-Cadastrar Produto                    |");
+    printf("\n   |                  2-Editar Produto                       |");
+    printf("\n   |                  3-Listas                               |");
+    printf("\n   |                  4-Relatórios                           |");
+    printf("\n   |                  0-Sair                                 |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   ------------------------ESTOQUE X--------------------------");
+
+    printf("\n\n\n Por favor, digite sua opção:\t");
+    scanf("%d", &OpcaoMenu);
+
+    switch (OpcaoMenu)
+    {
+    case 1:
+        CadastrarProduto();
+        break;
+    case 2:
+        EditarProduto();
+        break;
+    case 3:
+        listar();
+        break;
+    case 4:
+        Relatorios();
+        break;
+    case 0:
+        system("cls");
+        printf("\n\t\t\t\t\tAté mais! :)\n");
+        system("pause");
+        main();
+        break;
+    default:
+        printf("\nOpção inválida!");
+        printf("\n");
+        system("pause");
+        MenuCliente();
+    };
+}
+
+/* 4.1.1- FUNÇÃO/TELA MENU DO SETOR FINANCEIRO */
+void MenuFinanceiro()
+{
+    system("color 0b");
+    system("cls");
+    int OpcaoMenu;
+
+    setlocale(LC_ALL, "Portuguese");
+
+    printf("\n\t\tBem vindo, %s", UsrName);
+    printf("\n\n");
+
+    printf("\n   ----------------------MENU PRINCIPAL-----------------------");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                  1-Relatório Fechamento                 |");
+    printf("\n   |                  2-Listas                               |");
+    printf("\n   |                  0-Sair                                 |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   ------------------------ESTOQUE X--------------------------");
+
+    printf("\n\n\n Por favor, digite sua opção:\t");
+    scanf("%d", &OpcaoMenu);
+
+    switch (OpcaoMenu)
+    {
+    case 1:
+        RelatorioFechamento();
+        break;
+    case 2:
+        listar();
+        break;
+    case 0:
+        system("cls");
+        printf("\n\t\t\t\t\tAté mais! :)\n");
+        system("pause");
+        main();
+        break;
+    default:
+        printf("\nOpção inválida!");
+        printf("\n");
+        system("pause");
+        MenuFinanceiro();
+    };
+}
+
+/* 4.1.2- FUNÇÃO/TELA MENU INICIAL */
+int main()
+{
+    system("color 0b");
+    system("cls");
+    int opcao;
+
+    setlocale(LC_ALL, "Portuguese");
+
+    printf("\n\n");
+
+    printf("\n   ------------------------AUTENTICAÇÃO-----------------------");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                  1-Fazer Login                          |");
+    printf("\n   |                  0-Encerrar sessão                      |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   |                                                         |");
+    printf("\n   ------------------------ESTOQUE X--------------------------");
+
+    printf("\n\n\n Por favor, digite sua opção:\t");
+
+    scanf("%d", &opcao);
+    fgetc(stdin);
+
+    switch (opcao)
+    {
+    case 1:
+        Login();
+        break;
+    case 0:
+        system("cls");
+        printf("\n\t\t\t\t\tAté mais! :)\n");
+        system("\tpause");
+        return 0;
+        break;
+    case 75283:
+        Cadastro.UserRegistration = fopen("Users.txt", "r");
+
+        if (Cadastro.UserRegistration == NULL)
+        {
+            fclose(Cadastro.UserRegistration);
+            cadastrar();
+        }
+        else
+        {
+            fclose(Cadastro.UserRegistration);
+            printf("\nOpção inválida!");
+            printf("\n");
+            system("pause");
+            main();
+        }
+        break;
+    default:
+        printf("\nOpção inválida!");
+        printf("\n");
+        system("pause");
+        main();
+    }
+    return 0;
+}
