@@ -38,8 +38,7 @@ Para executar o projeto, você precisa ter:
 ## Instalação
 
 1. Clone o repositório:  
-   ```bash
-   git clone https://github.com/Fr-vinicius/sistema-estoque-x.git
+   `git clone https://github.com/Fr-vinicius/sistema-estoque-x.git`
    
 ## Uso
 
