@@ -42,7 +42,7 @@ Para executar o projeto, você precisa ter:
    
 ## Uso
 
-1. Tela de login::
+1. Tela de login:
 - Ao iniciar o programa, insira suas credenciais ou crie um novo usuário.
 - Usuários podem ser classificados em administrador, funcionários ou clientes.
 
