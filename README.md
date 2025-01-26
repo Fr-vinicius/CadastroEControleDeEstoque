@@ -1,4 +1,4 @@
-# Sistema de Estoque X
+# Gerenciamento de estoque
 
 Um projeto desenvolvido em **C** como parte do trabalho final do primeiro período do curso de **Análise e Desenvolvimento de Sistemas**. Este sistema gerencia o cadastro de usuários, produtos e relatórios financeiros, com níveis de acesso diferenciados: **administrador**, **funcionários** e **clientes**.
 
